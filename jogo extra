@@ -7,8 +7,10 @@
 #include "SDL_opengl.h"
 #include <SDL_image.h>
 #include <string.h>
+#include <time.h>
 
-#define quantBlocos 20 //quantidade de blocos a serem criados no cenário
+#define quantBlocos 16 //quantidade de blocos a serem criados no cenário
+
 
 //criar a imagem no programa
 GLuint loadtexture(const char* filename)
@@ -60,8 +62,10 @@ struct Bloco
     bool destroi;
 };
 
-int main(int argc, char *argv[])
+int main(int argc, char **argv[])
 {
+
+
 
 //------------inicio dos processos iniciais para criação da janela e definição de atributos--------------------------------------------//
 	//inicializa tudo
@@ -80,13 +84,13 @@ int main(int argc, char *argv[])
 
     //criando janela, definindo tamanho, cor e mostrando porç~çao da janela
 
-    SDL_WM_SetCaption("jogo extra", NULL);
+    SDL_WM_SetCaption("mate ou morra", NULL);
 
-    SDL_SetVideoMode(600, 400, 32, SDL_OPENGL);
+    SDL_SetVideoMode(1080, 768, 32, SDL_OPENGL);
 
     glClearColor(1, 1, 1, 0);
 
-    glViewport(0, 0, 600, 400);
+    glViewport(0, 0, 1080, 768);
 
     //sombreamento da janela
 
@@ -103,20 +107,21 @@ int main(int argc, char *argv[])
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
+
     //-----lógica-----//
     bool executando = true;
 
     SDL_Event click;
 
     //variaveis do personagem
-    float posX = 300;
-    float posY = 350;
+    float posX = 540;
+    float posY = 750;
     float compr = 50;
     float altur = 50;
 
     //variaveis do inimigo
-
-    float posX1 = 50;
+    srand(time(NULL));
+    float posX1 = (rand()%108000)/100;
     float posY1 = 50;
     float compr1 = 50;
     float altur1 = 50;
@@ -124,16 +129,18 @@ int main(int argc, char *argv[])
     float velX = 5;
     float velY = 5;
 
-    //declarando e  criando os blocos
+    //declarando e criando os blocos
     Bloco blocos[quantBlocos];
 
-    for(int i = 0, x = 4, y = 150; i < quantBlocos; i++, x += 61)
+    for(int i = 0, x = 4, y = 150, cont = 0; i < quantBlocos; cont++, i++, x += 250)
     {
-        if(x > 560)
+
+        if(x > 1010)
         {
             x = 4;
-            y += 23;
+            y += 150;
         }
+
 
         blocos[i].X = x;
         blocos[i].Y = y;
@@ -153,10 +160,17 @@ int main(int argc, char *argv[])
     unsigned int inimigoTextura = 0;
     inimigoTextura = loadtexture("imagens/spritedetetive3.png");
 
+    unsigned int backTexture = 0;
+    backTexture = loadtexture("imagens/background.png");
+
+    unsigned int obstaculo = 0;
+    obstaculo = loadtexture("imagens/obstaculo.png");
+
 
     //while principal do jogo
     while(executando)
     {
+
         //eventos
         while (SDL_PollEvent(&click))
         {
@@ -208,17 +222,17 @@ int main(int argc, char *argv[])
         {
             posX = 0;
         }
-        else if(posX+altur > 600)
+        else if(posX+altur > 1080)
         {
-            posX = 600 - compr;
+            posX = 1080 - compr;
         }
         else if(posY < 0)
         {
             posY = 0;
         }
-        else if(posY+altur > 400)
+        else if(posY+altur > 768)
         {
-            posY = 400 - altur;
+            posY = 768 - altur;
         }
 
 
@@ -231,7 +245,7 @@ int main(int argc, char *argv[])
             {
                 if(colisao(posX1, posY1, compr1, altur1, blocos[i].X, blocos[i].Y, blocos[i].comp, blocos[i].alt) == true)
                 {
-                    velX = -velX;
+                    velX = -velX*1.08;
                     blocos[i].destroi = false;
                     break;
                 }
@@ -245,7 +259,7 @@ int main(int argc, char *argv[])
             {
                 if(colisao(posX1, posY1, compr1, altur1, blocos[i].X, blocos[i].Y, blocos[i].comp, blocos[i].alt) == true)
                 {
-                    velY = -velY;
+                    velY = -velY*1.08;
                     blocos[i].destroi = false;
                     break;
                 }
@@ -257,7 +271,7 @@ int main(int argc, char *argv[])
         {
             velX = -velX;
         }
-        else if(posX1+altur1 > 600)
+        else if(posX1+altur1 > 1080)
         {
             velX = -velX;
         }
@@ -265,7 +279,7 @@ int main(int argc, char *argv[])
         {
             velY = -velY;
         }
-        else if(posY1+altur1 > 400)
+        else if(posY1+altur1 > 768)
         {
             //executando = false;
             velY = -velY;
@@ -284,7 +298,30 @@ int main(int argc, char *argv[])
         glPushMatrix();
 
         //dimenssões da matriz
-        glOrtho(0, 600, 400, 0, -1, 1);
+        glOrtho(0, 1080, 768, 0, -1, 1);
+
+        //background
+        glEnable(GL_TEXTURE_2D);
+        glBindTexture(GL_TEXTURE_2D, backTexture);
+
+        // quad of the background
+        glBegin(GL_QUADS);
+        glColor4ub(255, 255, 255, 255);
+
+        glTexCoord2d(0,0);
+            glVertex2f(0,0);
+        glTexCoord2d(1,0);
+            glVertex2f(1080,0);
+        glTexCoord2d(1,1);
+            glVertex2f(1080,768);
+        glTexCoord2d(0,1);
+            glVertex2f(0,768);
+
+        glEnd();
+        glDisable(GL_TEXTURE_2D);
+
+
+        //inicia o desenho do personagem
 
         glEnable(GL_TEXTURE_2D);
         glBindTexture(GL_TEXTURE_2D, personTextura);
@@ -292,7 +329,6 @@ int main(int argc, char *argv[])
         //cores
         glColor4ub(255, 255, 255, 255);
 
-        //inicia o desenho do personagem
         glBegin(GL_QUADS);
 
         glTexCoord2d(0,0);
@@ -310,6 +346,7 @@ int main(int argc, char *argv[])
 
 
         //inicia o desenho inimigo
+
 
         glEnable(GL_TEXTURE_2D);
         glBindTexture(GL_TEXTURE_2D, inimigoTextura);
@@ -330,22 +367,31 @@ int main(int argc, char *argv[])
         glEnd();
         glDisable(GL_TEXTURE_2D);
 
+
         //criação dos obstaculos
+        glEnable(GL_TEXTURE_2D);
+        glBindTexture(GL_TEXTURE_2D, obstaculo);
+
         glBegin((GL_QUADS));
-        glColor3ub(0, 255, 0);
+        glColor4ub(255, 255, 255, 255);
 
         for(int i = 0; i < quantBlocos; i++)
         {
             if(blocos[i].destroi == true)
             {
-                glVertex2f(blocos[i].X, blocos[i].Y);
+                glTexCoord2d(0,0);
+                    glVertex2f(blocos[i].X, blocos[i].Y);
+                glTexCoord2d(1,0);
                 glVertex2f(blocos[i].X + blocos[i].comp, blocos[i].Y);
+                glTexCoord2d(1,1);
                 glVertex2f(blocos[i].X + blocos[i].comp, blocos[i].Y + blocos[i].alt);
+                glTexCoord2d(0,1);
                 glVertex2f(blocos[i].X, blocos[i].Y + blocos[i].alt);
             }
         }
 
         glEnd();
+        glDisable(GL_TEXTURE_2D);
 
         //fecha a matriz de desenho
         glPopMatrix();
@@ -353,8 +399,6 @@ int main(int argc, char *argv[])
         SDL_GL_SwapBuffers(); //usado para animações
     }
 
-
 	SDL_Quit();
 
 	return 0;
-}
