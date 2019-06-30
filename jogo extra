@@ -9,8 +9,7 @@
 #include <string.h>
 #include <time.h>
 
-#define quantBlocos 16 //quantidade de blocos a serem criados no cenário
-
+#define quantBlocos 15 //quantidade de blocos a serem criados no cenário
 
 //criar a imagem no programa
 GLuint loadtexture(const char* filename)
@@ -51,6 +50,7 @@ bool colisao(float bloco1X, float bloco1Y, float bloco1Comp, float bloco1Alt, fl
     return true;
 }
 
+
 //struct para criar os obstaculos
 struct Bloco
 {
@@ -65,7 +65,7 @@ struct Bloco
 int main(int argc, char **argv[])
 {
 
-
+    bool tiro = false;
 
 //------------inicio dos processos iniciais para criação da janela e definição de atributos--------------------------------------------//
 	//inicializa tudo
@@ -120,8 +120,8 @@ int main(int argc, char **argv[])
     float altur = 50;
 
     //variaveis do inimigo
-    srand(time(NULL));
-    float posX1 = (rand()%108000)/100;
+    srand((unsigned)time(NULL));
+    float posX1 = rand()%1031;
     float posY1 = 50;
     float compr1 = 50;
     float altur1 = 50;
@@ -129,8 +129,18 @@ int main(int argc, char **argv[])
     float velX = 5;
     float velY = 5;
 
+
+    //variaveis do tiro
+    float tiroX= 565;
+    float tiroY= 750;
+    float tiroCompr= 3;
+    float tiroAltur= 6;
+
+    float velTiroY= -5;
+
     //declarando e criando os blocos
     Bloco blocos[quantBlocos];
+
 
     for(int i = 0, x = 4, y = 150, cont = 0; i < quantBlocos; cont++, i++, x += 250)
     {
@@ -141,14 +151,12 @@ int main(int argc, char **argv[])
             y += 150;
         }
 
-
         blocos[i].X = x;
         blocos[i].Y = y;
         blocos[i].comp = 60;
         blocos[i].alt = 20;
         blocos[i].destroi = true;
     }
-
 
 
     bool esq = false;
@@ -165,6 +173,9 @@ int main(int argc, char **argv[])
 
     unsigned int obstaculo = 0;
     obstaculo = loadtexture("imagens/obstaculo.png");
+
+    unsigned int tiroTextura = 0;
+    tiroTextura = loadtexture("imagens/tiro.png");
 
 
     //while principal do jogo
@@ -191,6 +202,10 @@ int main(int argc, char **argv[])
                 else if(click.key.keysym.sym == SDLK_d)
                 {
                     dir = true;
+                }
+                else if(click.key.keysym.sym == SDLK_0)
+                {
+                    tiro = true;
                 }
             }
             else if(click.type == SDL_KEYUP) // tecla é solta
@@ -236,6 +251,11 @@ int main(int argc, char **argv[])
         }
 
 
+        //movimento do tiro
+
+        tiroY += velTiroY;
+
+
         //movimento do inimigo
         posX1 += velX;
 
@@ -245,7 +265,7 @@ int main(int argc, char **argv[])
             {
                 if(colisao(posX1, posY1, compr1, altur1, blocos[i].X, blocos[i].Y, blocos[i].comp, blocos[i].alt) == true)
                 {
-                    velX = -velX*1.08;
+                    velX = -velX*1.09;
                     blocos[i].destroi = false;
                     break;
                 }
@@ -259,7 +279,7 @@ int main(int argc, char **argv[])
             {
                 if(colisao(posX1, posY1, compr1, altur1, blocos[i].X, blocos[i].Y, blocos[i].comp, blocos[i].alt) == true)
                 {
-                    velY = -velY*1.08;
+                    velY = -velY*1.09;
                     blocos[i].destroi = false;
                     break;
                 }
@@ -290,6 +310,9 @@ int main(int argc, char **argv[])
             velY = -velY;
            // velX = velX;
         }
+
+        //movimento do tiro
+
 
         //-----renderização------+//
         glClear(GL_COLOR_BUFFER_BIT); // limpa o buffer bit a bit
@@ -347,7 +370,6 @@ int main(int argc, char **argv[])
 
         //inicia o desenho inimigo
 
-
         glEnable(GL_TEXTURE_2D);
         glBindTexture(GL_TEXTURE_2D, inimigoTextura);
 
@@ -382,16 +404,41 @@ int main(int argc, char **argv[])
                 glTexCoord2d(0,0);
                     glVertex2f(blocos[i].X, blocos[i].Y);
                 glTexCoord2d(1,0);
-                glVertex2f(blocos[i].X + blocos[i].comp, blocos[i].Y);
+                    glVertex2f(blocos[i].X + blocos[i].comp, blocos[i].Y);
                 glTexCoord2d(1,1);
-                glVertex2f(blocos[i].X + blocos[i].comp, blocos[i].Y + blocos[i].alt);
+                    glVertex2f(blocos[i].X + blocos[i].comp, blocos[i].Y + blocos[i].alt);
                 glTexCoord2d(0,1);
-                glVertex2f(blocos[i].X, blocos[i].Y + blocos[i].alt);
+                    glVertex2f(blocos[i].X, blocos[i].Y + blocos[i].alt);
             }
         }
 
         glEnd();
         glDisable(GL_TEXTURE_2D);
+
+        //criação do tiro
+
+        while(executando)
+        {
+            glEnable(GL_TEXTURE_2D);
+            glBindTexture(GL_TEXTURE_2D, tiroTextura);
+
+            glBegin(GL_QUADS);
+            glColor3ub(255,255,255);
+
+            glTexCoord2d(0,0);
+                glVertex2f(tiroX, tiroY);
+            glTexCoord2d(1,0);
+                glVertex2f(tiroX+tiroCompr, tiroY);
+            glTexCoord2d(1,1);
+                glVertex2f(tiroX+tiroCompr, tiroY+tiroAltur);
+            glTexCoord2d(0,1);
+                glVertex2f(tiroX, tiroY+tiroAltur);
+
+            glEnd();
+            glDisable(GL_TEXTURE_2D);
+            break;
+        }
+
 
         //fecha a matriz de desenho
         glPopMatrix();
@@ -402,3 +449,4 @@ int main(int argc, char **argv[])
 	SDL_Quit();
 
 	return 0;
+}
