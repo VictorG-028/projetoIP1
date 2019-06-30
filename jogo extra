@@ -5,23 +5,60 @@
 #include <stdbool.h>
 #include <string.h>
 #include "SDL_opengl.h"
+#include <SDL_image.h>
+#include <string.h>
+
+#define quantBlocos 20 //quantidade de blocos a serem criados no cenário
+
+//criar a imagem no programa
+GLuint loadtexture(const char* filename)
+{
+    SDL_Surface* imagem = IMG_Load(filename); //carrega a imagem
+    SDL_DisplayFormatAlpha(imagem);
+    unsigned textura(0); //cria uma textura
+    glGenTextures(1, &textura); //gera a textura
+    glBindTexture(GL_TEXTURE_2D, textura); //informa o tipo de textura
+
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, imagem -> w, imagem -> h, 0, GL_RGBA, GL_UNSIGNED_BYTE, imagem -> pixels);
+
+    SDL_FreeSurface(imagem);
+
+    return textura;
+}
 
 //função da colisão
 //bloco1 - inimigo
 //bloco2 - personagem
 bool colisao(float bloco1X, float bloco1Y, float bloco1Comp, float bloco1Alt, float bloco2X, float bloco2Y, float bloco2comp, float bloco2alt)
 {
-    if(bloco1Y+bloco1Alt < bloco2Y)
+    if(bloco1Y+bloco1Alt <= bloco2Y)
         return false;
-    else if(bloco1Y > bloco2Y+bloco2alt)
+    else if(bloco1Y >= bloco2Y+bloco2alt)
         return false;
-    else if(bloco1X+bloco1Comp < bloco2X)
+    else if(bloco1X+bloco1Comp <= bloco2X)
         return false;
-    else if(bloco1X > bloco2X+bloco2comp)
+    else if(bloco1X >= bloco2X+bloco2comp)
         return false;
 
     return true;
 }
+
+//struct para criar os obstaculos
+struct Bloco
+{
+    float X;
+    float Y;
+    float comp;
+    float alt;
+
+    bool destroi;
+};
 
 int main(int argc, char *argv[])
 {
@@ -51,7 +88,6 @@ int main(int argc, char *argv[])
 
     glViewport(0, 0, 600, 400);
 
-
     //sombreamento da janela
 
     glShadeModel(GL_SMOOTH);
@@ -63,6 +99,9 @@ int main(int argc, char *argv[])
     //3d - disabilitar
     glDisable(GL_DEPTH_TEST);
 
+    //para usar a imagem da função la de cima
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     //-----lógica-----//
     bool executando = true;
@@ -82,12 +121,40 @@ int main(int argc, char *argv[])
     float compr1 = 50;
     float altur1 = 50;
 
+    float velX = 5;
+    float velY = 5;
+
+    //declarando e  criando os blocos
+    Bloco blocos[quantBlocos];
+
+    for(int i = 0, x = 4, y = 150; i < quantBlocos; i++, x += 61)
+    {
+        if(x > 560)
+        {
+            x = 4;
+            y += 23;
+        }
+
+        blocos[i].X = x;
+        blocos[i].Y = y;
+        blocos[i].comp = 60;
+        blocos[i].alt = 20;
+        blocos[i].destroi = true;
+    }
+
+
+
     bool esq = false;
     bool dir = false;
 
-    float velX = 8;
-    float velY = 8;
+    unsigned int personTextura = 0;
+    personTextura = loadtexture("imagens/detetive.png");
 
+    unsigned int inimigoTextura = 0;
+    inimigoTextura = loadtexture("imagens/spritedetetive3.png");
+
+
+    //while principal do jogo
     while(executando)
     {
         //eventos
@@ -157,7 +224,33 @@ int main(int argc, char *argv[])
 
         //movimento do inimigo
         posX1 += velX;
+
+        for(int i = 0; i <quantBlocos; i++)
+        {
+            if(blocos[i].destroi == true)
+            {
+                if(colisao(posX1, posY1, compr1, altur1, blocos[i].X, blocos[i].Y, blocos[i].comp, blocos[i].alt) == true)
+                {
+                    velX = -velX;
+                    blocos[i].destroi = false;
+                    break;
+                }
+            }
+        }
+
         posY1 += velY;
+        for(int i = 0; i <quantBlocos; i++)
+        {
+            if(blocos[i].destroi == true)
+            {
+                if(colisao(posX1, posY1, compr1, altur1, blocos[i].X, blocos[i].Y, blocos[i].comp, blocos[i].alt) == true)
+                {
+                    velY = -velY;
+                    blocos[i].destroi = false;
+                    break;
+                }
+            }
+        }
 
         //logica do inimigo
         if(posX1 < 0)
@@ -174,13 +267,14 @@ int main(int argc, char *argv[])
         }
         else if(posY1+altur1 > 400)
         {
-            executando = false;
+            //executando = false;
+            velY = -velY;
         }
 
         if(colisao(posX1, posY1, compr1, altur1, posX, posY, compr, altur) == true)
         {
             velY = -velY;
-            velX = -velX;
+           // velX = velX;
         }
 
         //-----renderização------+//
@@ -192,32 +286,65 @@ int main(int argc, char *argv[])
         //dimenssões da matriz
         glOrtho(0, 600, 400, 0, -1, 1);
 
+        glEnable(GL_TEXTURE_2D);
+        glBindTexture(GL_TEXTURE_2D, personTextura);
+
         //cores
-        glColor3ub(255, 0, 0);
+        glColor4ub(255, 255, 255, 255);
 
         //inicia o desenho do personagem
         glBegin(GL_QUADS);
 
-        glVertex2f(posX, posY);
-        glVertex2f(posX+compr, posY);
-        glVertex2f(posX+compr, posY+altur);
-        glVertex2f(posX, posY+altur);
-
+        glTexCoord2d(0,0);
+            glVertex2f(posX, posY);
+        glTexCoord2d(1,0);
+            glVertex2f(posX+compr, posY);
+        glTexCoord2d(1,1);
+            glVertex2f(posX+compr, posY+altur);
+        glTexCoord2d(0,1);
+            glVertex2f(posX, posY+altur);
 
         //termina o desenho do personagem
         glEnd();
+        glDisable(GL_TEXTURE_2D);
+
 
         //inicia o desenho inimigo
+
+        glEnable(GL_TEXTURE_2D);
+        glBindTexture(GL_TEXTURE_2D, inimigoTextura);
+
         glBegin(GL_QUADS);
-        glColor3ub(0, 0, 255);
+        glColor4ub(255, 255, 255, 255);
 
-        glVertex2f(posX1, posY1);
-        glVertex2f(posX1+compr1, posY1);
-        glVertex2f(posX1+compr1, posY1+altur1);
-        glVertex2f(posX1, posY1+altur1);
+        glTexCoord2d(0,0);
+            glVertex2f(posX1, posY1);
+        glTexCoord2d(1,0);
+            glVertex2f(posX1+compr1, posY1);
+        glTexCoord2d(1,1);
+            glVertex2f(posX1+compr1, posY1+altur1);
+        glTexCoord2d(0,1);
+            glVertex2f(posX1, posY1+altur1);
 
+        //termina o desenho do inimigo
+        glEnd();
+        glDisable(GL_TEXTURE_2D);
 
-        //termina o desenho do personagem
+        //criação dos obstaculos
+        glBegin((GL_QUADS));
+        glColor3ub(0, 255, 0);
+
+        for(int i = 0; i < quantBlocos; i++)
+        {
+            if(blocos[i].destroi == true)
+            {
+                glVertex2f(blocos[i].X, blocos[i].Y);
+                glVertex2f(blocos[i].X + blocos[i].comp, blocos[i].Y);
+                glVertex2f(blocos[i].X + blocos[i].comp, blocos[i].Y + blocos[i].alt);
+                glVertex2f(blocos[i].X, blocos[i].Y + blocos[i].alt);
+            }
+        }
+
         glEnd();
 
         //fecha a matriz de desenho
