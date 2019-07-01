@@ -129,14 +129,18 @@ int main(int argc, char **argv[])
     float velX = 5;
     float velY = 5;
 
+    //variaveis da barra de life
+    float life1X = 0;
+    float life1Y = 0;
+    float life1Compr = 200;
+    float life1altur = 50;
 
-    //variaveis do tiro
-    float tiroX= 565;
-    float tiroY= 750;
-    float tiroCompr= 3;
-    float tiroAltur= 6;
+    //variaveis da segunda barra de life
+    float life2X = 880;
+    float life2Y = 0;
+    float life2compr = 200;
+    float life2altur = 50;
 
-    float velTiroY= -5;
 
     //declarando e criando os blocos
     Bloco blocos[quantBlocos];
@@ -203,7 +207,7 @@ int main(int argc, char **argv[])
                 {
                     dir = true;
                 }
-                else if(click.key.keysym.sym == SDLK_0)
+                else if(click.key.keysym.sym == SDLK_k)
                 {
                     tiro = true;
                 }
@@ -218,6 +222,10 @@ int main(int argc, char **argv[])
                 {
                     dir = false;
                 }
+                else if(click.key.keysym.sym == SDLK_k)
+                {
+                    tiro = false;
+                }
             }
         }
 
@@ -230,6 +238,25 @@ int main(int argc, char **argv[])
         {
             posX+= 5;
         }
+
+        //variaveis do tiro
+
+        float tiroX= posX+25;
+        float tiroY= 715;
+        float tiroCompr= 3;
+        float tiroAltur= 6;
+
+        float velTiroY= -5;
+
+        if(tiro == true)
+        {
+            while (tiroY > 0)
+            {
+                tiroY += velTiroY;
+
+            }
+        }
+
 
         //logica do personagem
 
@@ -253,7 +280,7 @@ int main(int argc, char **argv[])
 
         //movimento do tiro
 
-        tiroY += velTiroY;
+
 
 
         //movimento do inimigo
@@ -310,8 +337,6 @@ int main(int argc, char **argv[])
             velY = -velY;
            // velX = velX;
         }
-
-        //movimento do tiro
 
 
         //-----renderização------+//
@@ -417,13 +442,11 @@ int main(int argc, char **argv[])
 
         //criação do tiro
 
-        while(executando)
-        {
             glEnable(GL_TEXTURE_2D);
             glBindTexture(GL_TEXTURE_2D, tiroTextura);
 
             glBegin(GL_QUADS);
-            glColor3ub(255,255,255);
+            glColor4ub(255,255,255, 255);
 
             glTexCoord2d(0,0);
                 glVertex2f(tiroX, tiroY);
@@ -436,8 +459,41 @@ int main(int argc, char **argv[])
 
             glEnd();
             glDisable(GL_TEXTURE_2D);
-            break;
-        }
+
+
+            //criação das barras de life
+
+        glEnable(GL_TEXTURE_2D);
+        glBindTexture(GL_TEXTURE_2D, inimigoTextura);
+
+        glBegin(GL_QUADS);
+        glColor4ub(255, 255, 255, 255);
+
+        glTexCoord2d(0,0);
+            glVertex2f(life1X, life1Y);
+        glTexCoord2d(1,0);
+            glVertex2f(life1X+life1Compr, life1Y);
+        glTexCoord2d(1,1);
+            glVertex2f(life1X+life1Compr, life1Y+life1altur);
+        glTexCoord2d(0,1);
+            glVertex2f(life1X, life1Y+life1altur);
+
+
+             glBegin(GL_QUADS);
+        glColor4ub(255, 255, 255, 255);
+
+        glTexCoord2d(0,0);
+            glVertex2f(life2X, life2Y);
+        glTexCoord2d(1,0);
+            glVertex2f(life2X+life2compr, life2Y);
+        glTexCoord2d(1,1);
+            glVertex2f(life2X+life2compr, life2Y+life2altur);
+        glTexCoord2d(0,1);
+            glVertex2f(life2X, life2Y+life2altur);
+
+        //termina o desenho do inimigo
+        glEnd();
+        glDisable(GL_TEXTURE_2D);
 
 
         //fecha a matriz de desenho
