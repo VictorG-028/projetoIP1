@@ -1,508 +1,607 @@
+//Using SDL and standard IO
 #include <SDL.h>
-#undef main
+#include <SDL_image.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
 #include <string.h>
-#include "SDL_opengl.h"
-#include <SDL_image.h>
-#include <string.h>
 #include <time.h>
 
-#define quantBlocos 15 //quantidade de blocos a serem criados no cenário
+#define velAsssassino 75 //delay para retardar o movimento do assassino
+#define quantBlocos 20 //quantidade de blocos a serem criados
 
-//criar a imagem no programa
-GLuint loadtexture(const char* filename)
+//dimenssões da janela principal
+const int SCREEN_WIDTH = 1080;
+const int SCREEN_HEIGHT = 760;
+
+
+//criação das variaveis de imagens e janelas
+SDL_Window* janela = NULL;
+SDL_Surface* superficiePrincipal = NULL;
+SDL_Surface* background = NULL;
+SDL_Renderer* gRenderer = NULL;
+SDL_Texture* gTexture = NULL;
+SDL_Texture* detetive1 = NULL;
+SDL_Texture* detetive2 = NULL;
+SDL_Texture* detetive3 = NULL;
+SDL_Texture* detetive4 = NULL;
+SDL_Texture* detetive5 = NULL;
+SDL_Texture* detetive6 = NULL;
+SDL_Texture* detetive7 = NULL;
+SDL_Texture* assassino1 = NULL;
+SDL_Texture* assassino2 = NULL;
+SDL_Texture* assassino3 = NULL;
+SDL_Texture* obst = NULL;
+SDL_Texture* barraDeLife1 = NULL;
+SDL_Texture* barraDeLife2 = NULL;
+SDL_Texture* barraDeLife3 = NULL;
+SDL_Texture* barraDeLife4 = NULL;
+SDL_Texture* barraDeLife5 = NULL;
+SDL_Texture* projetil = NULL;
+
+
+
+
+//-----------------------------------INICIO DAS FUNÇÕES-------------------------------------------------//
+//-----------------------------------------------------------------------------------------------------//
+
+//inicializa tudo
+bool init();
+
+//fecha tudo
+void fechar();
+
+//insere imagem na tela.
+bool loadImage();
+
+//carrega textura individual
+SDL_Texture* loadTexture(const char* imagens, SDL_Renderer* window_renderer);
+
+
+bool init()
 {
-    SDL_Surface* imagem = IMG_Load(filename); //carrega a imagem
-    SDL_DisplayFormatAlpha(imagem);
-    unsigned textura(0); //cria uma textura
-    glGenTextures(1, &textura); //gera a textura
-    glBindTexture(GL_TEXTURE_2D, textura); //informa o tipo de textura
+	//inicializando flag
+	bool sucesso = true;
 
-    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, imagem -> w, imagem -> h, 0, GL_RGBA, GL_UNSIGNED_BYTE, imagem -> pixels);
-
-    SDL_FreeSurface(imagem);
-
-    return textura;
-}
-
-//função da colisão
-//bloco1 - inimigo
-//bloco2 - personagem
-bool colisao(float bloco1X, float bloco1Y, float bloco1Comp, float bloco1Alt, float bloco2X, float bloco2Y, float bloco2comp, float bloco2alt)
-{
-    if(bloco1Y+bloco1Alt <= bloco2Y)
-        return false;
-    else if(bloco1Y >= bloco2Y+bloco2alt)
-        return false;
-    else if(bloco1X+bloco1Comp <= bloco2X)
-        return false;
-    else if(bloco1X >= bloco2X+bloco2comp)
-        return false;
-
-    return true;
-}
-
-
-//struct para criar os obstaculos
-struct Bloco
-{
-    float X;
-    float Y;
-    float comp;
-    float alt;
-
-    bool destroi;
-};
-
-int main(int argc, char **argv[])
-{
-
-    bool tiro = false;
-
-//------------inicio dos processos iniciais para criação da janela e definição de atributos--------------------------------------------//
-	//inicializa tudo
+	//inicializa o uso do SDL
 	SDL_Init(SDL_INIT_EVERYTHING);
 
-    glDisable(GL_BLEND);
+	//inicializa o uso de arquivos PNG
+	SDL_Init(IMG_INIT_PNG);
 
-    //diminuindo o uso da memória
-    SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 8);
-    SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 8);
-    SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 8);
-    SDL_GL_SetAttribute(SDL_GL_ALPHA_SIZE, 8);
-    SDL_GL_SetAttribute(SDL_GL_BUFFER_SIZE, 32);
-    SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 16);
-    SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+	//cria a janela
+	janela = SDL_CreateWindow("Mate ou Morra", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_SHOWN);
 
-    //criando janela, definindo tamanho, cor e mostrando porç~çao da janela
+	superficiePrincipal = SDL_GetWindowSurface(janela);
 
-    SDL_WM_SetCaption("mate ou morra", NULL);
+	//cria a renderização para a tela principal
+	gRenderer = SDL_CreateRenderer(janela, -1, SDL_RENDERER_ACCELERATED);
 
-    SDL_SetVideoMode(1080, 768, 32, SDL_OPENGL);
+	//inicializa a cor de renderização
+	SDL_SetRenderDrawColor(gRenderer, 255, 255, 255, 255);
 
-    glClearColor(1, 1, 1, 0);
+	return sucesso;
+}
 
-    glViewport(0, 0, 1080, 768);
+void fechar()
+{
+	//libera a superficie
+	SDL_DestroyTexture(gTexture);
+	SDL_DestroyTexture(detetive1);
+	SDL_DestroyTexture(assassino1);
+	gTexture = NULL;
 
-    //sombreamento da janela
+	//destroi a janela
+	SDL_DestroyRenderer(gRenderer);
+	SDL_DestroyWindow(janela);
+	janela = NULL;
+	gRenderer = NULL;
 
-    glShadeModel(GL_SMOOTH);
+	//encerra o uso do tipo PNG
+	IMG_Quit();
 
-    //2d
-    glMatrixMode(GL_PROJECTION);
-    glLoadIdentity(); //desenhos geometricos;
-
-    //3d - disabilitar
-    glDisable(GL_DEPTH_TEST);
-
-    //para usar a imagem da função la de cima
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-
-    //-----lógica-----//
-    bool executando = true;
-
-    SDL_Event click;
-
-    //variaveis do personagem
-    float posX = 540;
-    float posY = 750;
-    float compr = 50;
-    float altur = 50;
-
-    //variaveis do inimigo
-    srand((unsigned)time(NULL));
-    float posX1 = rand()%1031;
-    float posY1 = 50;
-    float compr1 = 50;
-    float altur1 = 50;
-
-    float velX = 5;
-    float velY = 5;
-
-    //variaveis da barra de life
-    float life1X = 0;
-    float life1Y = 0;
-    float life1Compr = 200;
-    float life1altur = 50;
-
-    //variaveis da segunda barra de life
-    float life2X = 880;
-    float life2Y = 0;
-    float life2compr = 200;
-    float life2altur = 50;
-
-
-    //declarando e criando os blocos
-    Bloco blocos[quantBlocos];
-
-
-    for(int i = 0, x = 4, y = 150, cont = 0; i < quantBlocos; cont++, i++, x += 250)
-    {
-
-        if(x > 1010)
-        {
-            x = 4;
-            y += 150;
-        }
-
-        blocos[i].X = x;
-        blocos[i].Y = y;
-        blocos[i].comp = 60;
-        blocos[i].alt = 20;
-        blocos[i].destroi = true;
-    }
-
-
-    bool esq = false;
-    bool dir = false;
-
-    unsigned int personTextura = 0;
-    personTextura = loadtexture("imagens/detetive.png");
-
-    unsigned int inimigoTextura = 0;
-    inimigoTextura = loadtexture("imagens/spritedetetive3.png");
-
-    unsigned int backTexture = 0;
-    backTexture = loadtexture("imagens/background.png");
-
-    unsigned int obstaculo = 0;
-    obstaculo = loadtexture("imagens/obstaculo.png");
-
-    unsigned int tiroTextura = 0;
-    tiroTextura = loadtexture("imagens/tiro.png");
-
-
-    //while principal do jogo
-    while(executando)
-    {
-
-        //eventos
-        while (SDL_PollEvent(&click))
-        {
-            if(click.type == SDL_QUIT)
-            {
-                executando = false;
-            }
-            if (click.type == SDL_KEYDOWN && click.key.keysym.sym == SDLK_ESCAPE)
-            {
-                executando = false;
-            }
-            if(click.type == SDL_KEYDOWN) // tecla é pressionada
-            {
-                if(click.key.keysym.sym == SDLK_a)
-                {
-                    esq = true;
-                }
-                else if(click.key.keysym.sym == SDLK_d)
-                {
-                    dir = true;
-                }
-                else if(click.key.keysym.sym == SDLK_k)
-                {
-                    tiro = true;
-                }
-            }
-            else if(click.type == SDL_KEYUP) // tecla é solta
-            {
-                if(click.key.keysym.sym == SDLK_a)
-                {
-                    esq = false;
-                }
-                else if(click.key.keysym.sym == SDLK_d)
-                {
-                    dir = false;
-                }
-                else if(click.key.keysym.sym == SDLK_k)
-                {
-                    tiro = false;
-                }
-            }
-        }
-
-        //movimento do personagem
-        if(esq == true)
-        {
-            posX-= 5;
-        }
-        else if(dir == true)
-        {
-            posX+= 5;
-        }
-
-        //variaveis do tiro
-
-        float tiroX= posX+25;
-        float tiroY= 715;
-        float tiroCompr= 3;
-        float tiroAltur= 6;
-
-        float velTiroY= -5;
-
-        if(tiro == true)
-        {
-            while (tiroY > 0)
-            {
-                tiroY += velTiroY;
-
-            }
-        }
-
-
-        //logica do personagem
-
-        if(posX < 0)
-        {
-            posX = 0;
-        }
-        else if(posX+altur > 1080)
-        {
-            posX = 1080 - compr;
-        }
-        else if(posY < 0)
-        {
-            posY = 0;
-        }
-        else if(posY+altur > 768)
-        {
-            posY = 768 - altur;
-        }
-
-
-        //movimento do tiro
-
-
-
-
-        //movimento do inimigo
-        posX1 += velX;
-
-        for(int i = 0; i <quantBlocos; i++)
-        {
-            if(blocos[i].destroi == true)
-            {
-                if(colisao(posX1, posY1, compr1, altur1, blocos[i].X, blocos[i].Y, blocos[i].comp, blocos[i].alt) == true)
-                {
-                    velX = -velX*1.09;
-                    blocos[i].destroi = false;
-                    break;
-                }
-            }
-        }
-
-        posY1 += velY;
-        for(int i = 0; i <quantBlocos; i++)
-        {
-            if(blocos[i].destroi == true)
-            {
-                if(colisao(posX1, posY1, compr1, altur1, blocos[i].X, blocos[i].Y, blocos[i].comp, blocos[i].alt) == true)
-                {
-                    velY = -velY*1.09;
-                    blocos[i].destroi = false;
-                    break;
-                }
-            }
-        }
-
-        //logica do inimigo
-        if(posX1 < 0)
-        {
-            velX = -velX;
-        }
-        else if(posX1+altur1 > 1080)
-        {
-            velX = -velX;
-        }
-        else if(posY1 < 0)
-        {
-            velY = -velY;
-        }
-        else if(posY1+altur1 > 768)
-        {
-            //executando = false;
-            velY = -velY;
-        }
-
-        if(colisao(posX1, posY1, compr1, altur1, posX, posY, compr, altur) == true)
-        {
-            velY = -velY;
-           // velX = velX;
-        }
-
-
-        //-----renderização------+//
-        glClear(GL_COLOR_BUFFER_BIT); // limpa o buffer bit a bit
-
-        //inicia matriz de desenho
-        glPushMatrix();
-
-        //dimenssões da matriz
-        glOrtho(0, 1080, 768, 0, -1, 1);
-
-        //background
-        glEnable(GL_TEXTURE_2D);
-        glBindTexture(GL_TEXTURE_2D, backTexture);
-
-        // quad of the background
-        glBegin(GL_QUADS);
-        glColor4ub(255, 255, 255, 255);
-
-        glTexCoord2d(0,0);
-            glVertex2f(0,0);
-        glTexCoord2d(1,0);
-            glVertex2f(1080,0);
-        glTexCoord2d(1,1);
-            glVertex2f(1080,768);
-        glTexCoord2d(0,1);
-            glVertex2f(0,768);
-
-        glEnd();
-        glDisable(GL_TEXTURE_2D);
-
-
-        //inicia o desenho do personagem
-
-        glEnable(GL_TEXTURE_2D);
-        glBindTexture(GL_TEXTURE_2D, personTextura);
-
-        //cores
-        glColor4ub(255, 255, 255, 255);
-
-        glBegin(GL_QUADS);
-
-        glTexCoord2d(0,0);
-            glVertex2f(posX, posY);
-        glTexCoord2d(1,0);
-            glVertex2f(posX+compr, posY);
-        glTexCoord2d(1,1);
-            glVertex2f(posX+compr, posY+altur);
-        glTexCoord2d(0,1);
-            glVertex2f(posX, posY+altur);
-
-        //termina o desenho do personagem
-        glEnd();
-        glDisable(GL_TEXTURE_2D);
-
-
-        //inicia o desenho inimigo
-
-        glEnable(GL_TEXTURE_2D);
-        glBindTexture(GL_TEXTURE_2D, inimigoTextura);
-
-        glBegin(GL_QUADS);
-        glColor4ub(255, 255, 255, 255);
-
-        glTexCoord2d(0,0);
-            glVertex2f(posX1, posY1);
-        glTexCoord2d(1,0);
-            glVertex2f(posX1+compr1, posY1);
-        glTexCoord2d(1,1);
-            glVertex2f(posX1+compr1, posY1+altur1);
-        glTexCoord2d(0,1);
-            glVertex2f(posX1, posY1+altur1);
-
-        //termina o desenho do inimigo
-        glEnd();
-        glDisable(GL_TEXTURE_2D);
-
-
-        //criação dos obstaculos
-        glEnable(GL_TEXTURE_2D);
-        glBindTexture(GL_TEXTURE_2D, obstaculo);
-
-        glBegin((GL_QUADS));
-        glColor4ub(255, 255, 255, 255);
-
-        for(int i = 0; i < quantBlocos; i++)
-        {
-            if(blocos[i].destroi == true)
-            {
-                glTexCoord2d(0,0);
-                    glVertex2f(blocos[i].X, blocos[i].Y);
-                glTexCoord2d(1,0);
-                    glVertex2f(blocos[i].X + blocos[i].comp, blocos[i].Y);
-                glTexCoord2d(1,1);
-                    glVertex2f(blocos[i].X + blocos[i].comp, blocos[i].Y + blocos[i].alt);
-                glTexCoord2d(0,1);
-                    glVertex2f(blocos[i].X, blocos[i].Y + blocos[i].alt);
-            }
-        }
-
-        glEnd();
-        glDisable(GL_TEXTURE_2D);
-
-        //criação do tiro
-
-            glEnable(GL_TEXTURE_2D);
-            glBindTexture(GL_TEXTURE_2D, tiroTextura);
-
-            glBegin(GL_QUADS);
-            glColor4ub(255,255,255, 255);
-
-            glTexCoord2d(0,0);
-                glVertex2f(tiroX, tiroY);
-            glTexCoord2d(1,0);
-                glVertex2f(tiroX+tiroCompr, tiroY);
-            glTexCoord2d(1,1);
-                glVertex2f(tiroX+tiroCompr, tiroY+tiroAltur);
-            glTexCoord2d(0,1);
-                glVertex2f(tiroX, tiroY+tiroAltur);
-
-            glEnd();
-            glDisable(GL_TEXTURE_2D);
-
-
-            //criação das barras de life
-
-        glEnable(GL_TEXTURE_2D);
-        glBindTexture(GL_TEXTURE_2D, inimigoTextura);
-
-        glBegin(GL_QUADS);
-        glColor4ub(255, 255, 255, 255);
-
-        glTexCoord2d(0,0);
-            glVertex2f(life1X, life1Y);
-        glTexCoord2d(1,0);
-            glVertex2f(life1X+life1Compr, life1Y);
-        glTexCoord2d(1,1);
-            glVertex2f(life1X+life1Compr, life1Y+life1altur);
-        glTexCoord2d(0,1);
-            glVertex2f(life1X, life1Y+life1altur);
-
-
-             glBegin(GL_QUADS);
-        glColor4ub(255, 255, 255, 255);
-
-        glTexCoord2d(0,0);
-            glVertex2f(life2X, life2Y);
-        glTexCoord2d(1,0);
-            glVertex2f(life2X+life2compr, life2Y);
-        glTexCoord2d(1,1);
-            glVertex2f(life2X+life2compr, life2Y+life2altur);
-        glTexCoord2d(0,1);
-            glVertex2f(life2X, life2Y+life2altur);
-
-        //termina o desenho do inimigo
-        glEnd();
-        glDisable(GL_TEXTURE_2D);
-
-
-        //fecha a matriz de desenho
-        glPopMatrix();
-
-        SDL_GL_SwapBuffers(); //usado para animações
-    }
-
+	//encerra o SDL
 	SDL_Quit();
+}
+
+bool loadImage()
+{
+	bool sucesso = true;
+
+	//adiciona a imagem a superficie inteira
+	gTexture = loadTexture("imagens/background.png", gRenderer);
+	detetive1 = loadTexture("imagens/detetive1.png", gRenderer);
+	detetive2 = loadTexture("imagens/detetive2.png", gRenderer);
+	detetive3 = loadTexture("imagens/detetive3.png", gRenderer);
+	detetive4 = loadTexture("imagens/detetive4.png", gRenderer);
+	detetive5 = loadTexture("imagens/detetive5.png", gRenderer);
+	detetive6 = loadTexture("imagens/detetive6.png", gRenderer);
+	detetive7 = loadTexture("imagens/detetive7.png", gRenderer);
+	assassino1 = loadTexture("imagens/assassino1.png", gRenderer);
+	assassino2 = loadTexture("imagens/assassino2.png", gRenderer);
+	assassino3 = loadTexture("imagens/assassino3.png", gRenderer);
+	obst = loadTexture("imagens/obstaculo.png", gRenderer);
+	barraDeLife1 = loadTexture("imagens/barradelife1.png", gRenderer);
+	barraDeLife2 = loadTexture("imagens/barradelife2.png", gRenderer);
+	barraDeLife3 = loadTexture("imagens/barradelife3.png", gRenderer);
+	barraDeLife4 = loadTexture("imagens/barradelife4.png", gRenderer);
+	barraDeLife5 = loadTexture("imagens/barradelife5.png", gRenderer);
+	projetil = loadTexture("imagens/tiro.png", gRenderer);
+
+	if (gTexture == NULL)
+	{
+		printf("imagem não localizada %s! SDL Error: %s\n", "imagens/background.png", SDL_GetError());
+		sucesso = false;
+	}
+
+	return sucesso;
+}
+
+SDL_Texture* loadTexture(const char* imagens, SDL_Renderer* gRenderer)
+{
+	//imagem final otimizada
+	SDL_Texture* newTexture = NULL;
+
+	//da load de uma imagem
+	SDL_Surface* loadedSurface = IMG_Load(imagens);
+	if (loadedSurface == NULL)
+	{
+		printf("Unable to load image %s! SDL_image Error: %s\n", imagens, IMG_GetError());
+	}
+
+	//converte a imagem para o tamanho da screen
+	newTexture = SDL_CreateTextureFromSurface(gRenderer, loadedSurface);
+	if (newTexture == NULL)
+	{
+		printf("Unable to create texture from % s!SDL Error : % s\n", imagens, SDL_GetError() );
+	}
+
+	SDL_FreeSurface(loadedSurface);
+
+	return newTexture;
+}
+
+
+
+//-----------------------------------FIM DAS FUNÇÕES---------------------------------------------------//
+//-----------------------------------------------------------------------------------------------------//
+
+
+int main(int argc, char* args[])
+{
+	//contadores de vida
+	int vidaDetetive = 4;
+	int vidaAssassino = 4;
+
+	//booleanas de movimento
+	bool esq = false;
+	bool dir = false;
+	bool atirar = false;
+	
+	//contadores de frames
+	int frameAtual = 0;
+	int frameDetetive = 0;
+	int qtdFrame = 3;
+	
+
+	//randoniza a posição X do assassino
+	srand(time(NULL));
+
+	//função booleana de execução do loop e criação da variavel atribuida a eventos
+	bool executando = true;
+	SDL_Event click;
+	
+
+	//--Area de criação de retangulos :D --//
+	
+	SDL_Rect detetiveRect;
+	detetiveRect.x = SCREEN_WIDTH / 2 - 25;
+	detetiveRect.y = SCREEN_HEIGHT - 50;
+	detetiveRect.w = 50;
+	detetiveRect.h = 50;
+
+	SDL_Rect assassinoRect;
+	assassinoRect.x = rand() % 1029 - rand() % 1029;
+	while (assassinoRect.x < 0)
+	{
+		assassinoRect.x = rand() % 1029 - rand() % 1029;
+	}
+	assassinoRect.y = 0;
+	assassinoRect.w = 50;
+	assassinoRect.h = 50;
+	
+	float velMovAssassinoX = 8;
+	float velMovAssassinoY = 8;
+
+
+	bool blocoViVo[quantBlocos];
+	for (int i = 0; i < quantBlocos; i++)
+	{
+		blocoViVo[i] = true;
+	}
+	SDL_Rect obstaculosRect[quantBlocos];
+	for (int i = 0, x = 4, y = 150; i < quantBlocos; i++, x += 250)
+	{
+		if (blocoViVo[i] == true)
+		{
+			if (x > 1010)
+			{
+				x = 4;
+				y += 150;
+			}
+			obstaculosRect[i].x = x;
+			obstaculosRect[i].y = y;
+			obstaculosRect[i].w = 60;
+			obstaculosRect[i].h = 20;
+		}
+	}
+
+
+	SDL_Rect lifeDetetiveRect;
+	lifeDetetiveRect.x = 0;
+	lifeDetetiveRect.y = 0;
+	lifeDetetiveRect.w = 200;
+	lifeDetetiveRect.h = 60;
+
+	SDL_Rect lifeAssassinoRect;
+	lifeAssassinoRect.x = 880;
+	lifeAssassinoRect.y = 0;
+	lifeAssassinoRect.w = 200;
+	lifeAssassinoRect.h = 60;
+
+	SDL_Rect projetilRect;
+	bool projetilVida = true;
+
+	float velProjetil = 20;
+	
+
+	//--fim da área de criação de retângulos--//
+
+	
+	init();
+
+	loadImage();
+
+
+	//loop principal do jogo
+	while (executando)
+	{	
+
+		//eventos de comando do teclado/mouse
+		while (SDL_PollEvent(&click))
+		{
+			//fechando a janela com ESC ou clique no X
+			if (click.type == SDL_QUIT)
+			{
+				executando = false;
+			}
+
+			switch (click.key.keysym.sym)
+			{
+				case SDLK_ESCAPE:
+					executando = false;
+			}
+
+			if (click.type == SDL_KEYDOWN)
+			{
+				if (click.key.keysym.sym == SDLK_a)
+				{
+					esq = true;
+				}
+				else if (click.key.keysym.sym == SDLK_d)
+				{
+					dir = true;
+				}
+				else if (click.key.keysym.sym == SDLK_k)
+				{
+					if (projetilVida)
+					{
+						projetilRect.x = detetiveRect.x;
+						projetilRect.y = SCREEN_HEIGHT - 50;
+						projetilRect.w = 10;
+						projetilRect.h = 20;
+					}
+					
+					atirar = true;
+				}
+			}
+			else if(click.type == SDL_KEYUP)
+				if (click.key.keysym.sym == SDLK_a)
+				{
+					esq = false;
+				}
+				else if (click.key.keysym.sym == SDLK_d)
+				{
+					dir = false;
+				}				
+		}
+
+		//---------------lógica----------------------//
+		//------------------------------------------//
+
+		//---DETETIVE---//
+
+		//movimento do detetive
+		if (esq == true)
+		{
+				detetiveRect.x -= 24;
+		}
+		else if (dir == true)
+		{
+				detetiveRect.x += 24;
+		}
+
+		//colisão do detetive com a tela
+		if (detetiveRect.x < 0)
+		{
+			detetiveRect.x = 0;
+		}
+		else if (detetiveRect.x > SCREEN_WIDTH - detetiveRect.w)
+		{
+			detetiveRect.x = SCREEN_WIDTH - detetiveRect.w;
+		}
+
+		//--ASSASSINO--//
+
+		//movimento do inimigo
+		assassinoRect.x += velMovAssassinoX;
+		assassinoRect.y += velMovAssassinoY;
+	
+		//colisão do inimigo com a tela
+		if (assassinoRect.x < 0)
+		{
+			assassinoRect.x = 0;
+			if (assassinoRect.x == 0)
+			{
+				velMovAssassinoX = -velMovAssassinoX;
+			}
+		}
+		if (assassinoRect.x > SCREEN_WIDTH - assassinoRect.w)
+		{
+			assassinoRect.x = SCREEN_WIDTH - assassinoRect.w;
+			if (assassinoRect.x == SCREEN_WIDTH - assassinoRect.w)
+			{
+				velMovAssassinoX = -velMovAssassinoX;
+			}
+		}
+		if (assassinoRect.y < 0)
+		{
+			assassinoRect.y = 0;
+			if (assassinoRect.y == 0)
+			{
+				velMovAssassinoY = -velMovAssassinoY;
+			}
+		}
+		if (assassinoRect.y > SCREEN_HEIGHT - assassinoRect.h)
+		{
+			assassinoRect.y = SCREEN_HEIGHT - assassinoRect.h;
+			if (assassinoRect.y == SCREEN_HEIGHT - assassinoRect.h)
+			{
+				velMovAssassinoY = -velMovAssassinoY;
+			}
+		}
+
+		//--PROJETIL--//
+
+		//posição do projetil
+		if (esq == true)
+		{
+			projetilRect.x -= 24;
+		}
+		else if (dir == true)
+		{
+			projetilRect.x += 24;
+		}
+
+		//movimento do projetil
+
+		if (atirar == true)
+		{
+			if(projetilRect.y > 0)
+			{
+				projetilRect.y = projetilRect.y - velProjetil;
+			}
+			else if (projetilRect.y <= 0)
+			{
+				projetilRect.y = SCREEN_HEIGHT - 50;
+				projetilVida = false;
+				atirar = false;
+			}
+		}
+
+
+		//--COLISÕES--//
+
+		//colisão do inimigo com o detetive
+		SDL_bool colIniDet = SDL_HasIntersection(&assassinoRect, &detetiveRect);
+
+		if (colIniDet)
+		{
+			velMovAssassinoX = velMovAssassinoX;
+			velMovAssassinoY = -velMovAssassinoY;
+
+			vidaDetetive--;
+			
+			if (vidaDetetive == 0)
+			{
+				executando = false;
+			}
+		}
+
+		//colisão do inimigo com os obstaculos
+
+		SDL_bool colIniBloq[quantBlocos];
+		for (int i = 0; i < quantBlocos; i++)
+		{
+			colIniBloq[i] = true;
+		}
+
+		for (int i = 0; i < quantBlocos; i++)
+		{
+			colIniBloq[i] = SDL_HasIntersection(&assassinoRect, &obstaculosRect[i]);
+		}
+
+		for (int i = 0; i < quantBlocos; i++)
+		{
+			if (colIniBloq[i] == true)
+			{
+				if (blocoViVo[i] == true)
+				{
+					velMovAssassinoX = velMovAssassinoX * 1.1;
+					velMovAssassinoY = -velMovAssassinoY * 1.1;
+
+					blocoViVo[i] = false;
+				}	
+			}
+		}
+
+		//colisão projetil com inimigo
+
+		SDL_bool colPorjIni = SDL_HasIntersection(&projetilRect, &assassinoRect);
+
+		if (colPorjIni)
+		{
+			projetilRect.y = SCREEN_HEIGHT - 50;
+			vidaAssassino--;
+			if (vidaAssassino <= 0)
+			{
+				vidaAssassino = 0;
+				executando = false;
+			}
+		}
+		
+		
+		//--------renderização---------//
+		//----------------------------//
+
+		//limpa a renderização
+		SDL_RenderClear(gRenderer);
+
+		//renderiza a textura na tela
+		SDL_RenderCopy(gRenderer, gTexture, NULL, NULL);
+
+		SDL_RenderCopy(gRenderer, detetive1, NULL, &detetiveRect);
+		if (esq)
+		{
+			switch (frameDetetive)
+			{
+				case 0:
+					SDL_RenderCopy(gRenderer, detetive2, NULL, &detetiveRect);
+					break;
+				case 1:
+					SDL_RenderCopy(gRenderer, detetive3, NULL, &detetiveRect);
+					break;
+				case 2:
+					SDL_RenderCopy(gRenderer, detetive4, NULL, &detetiveRect);
+					break;
+			}
+		}
+		else if (dir)
+		{
+			switch (frameDetetive)
+			{
+			case 0:
+				SDL_RenderCopy(gRenderer, detetive5, NULL, &detetiveRect);
+				break;
+			case 1:
+				SDL_RenderCopy(gRenderer, detetive6, NULL, &detetiveRect);
+				break;
+			case 2:
+				SDL_RenderCopy(gRenderer, detetive7, NULL, &detetiveRect);
+				break;
+			}
+		}
+		
+		switch (frameAtual)
+		{
+			case 0:
+				SDL_RenderCopy(gRenderer, assassino1, NULL, &assassinoRect);
+				break;
+			case 1:
+				SDL_RenderCopy(gRenderer, assassino2, NULL, &assassinoRect);
+				break;
+			case 2:
+				SDL_RenderCopy(gRenderer, assassino3, NULL, &assassinoRect);
+				break;
+		}
+
+		for (int i = 0; i < quantBlocos; i++)
+		{
+			if (blocoViVo[i] == true)
+			{
+				SDL_RenderCopy(gRenderer, obst, NULL, &obstaculosRect[i]);
+			}
+		}
+
+		switch (vidaDetetive)
+		{
+		case 4:
+			SDL_RenderCopy(gRenderer, barraDeLife1, NULL, &lifeDetetiveRect);
+			break;
+		case 3:
+			SDL_RenderCopy(gRenderer, barraDeLife2, NULL, &lifeDetetiveRect);
+			break;
+		case 2:
+			SDL_RenderCopy(gRenderer, barraDeLife3, NULL, &lifeDetetiveRect);
+			break;
+		case 1:
+			SDL_RenderCopy(gRenderer, barraDeLife4, NULL, &lifeDetetiveRect);
+			break;
+		case 0:
+			SDL_RenderCopy(gRenderer, barraDeLife5, NULL, &lifeDetetiveRect);
+			break;
+		}
+
+		switch (vidaAssassino)
+		{
+		case 4:
+			SDL_RenderCopy(gRenderer, barraDeLife1, NULL, &lifeAssassinoRect);
+			break;
+		case 3:
+			SDL_RenderCopy(gRenderer, barraDeLife2, NULL, &lifeAssassinoRect);
+			break;
+		case 2:
+			SDL_RenderCopy(gRenderer, barraDeLife3, NULL, &lifeAssassinoRect);
+			break;
+		case 1:
+			SDL_RenderCopy(gRenderer, barraDeLife4, NULL, &lifeAssassinoRect);
+			break;
+		case 0:
+			SDL_RenderCopy(gRenderer, barraDeLife5, NULL, &lifeAssassinoRect);
+			break;
+		}
+
+		if (atirar == true)
+		{
+			if (projetilVida == true)
+			{
+				SDL_RenderCopy(gRenderer, projetil, NULL, &projetilRect);
+			}
+		}
+		else if (atirar == false)
+		{
+			SDL_RenderClear(&projetil);
+			projetilVida == true;
+		}
+			
+
+		//atualiza a renderização
+		SDL_RenderPresent(gRenderer);
+
+		frameAtual++;
+		if (frameAtual == 3)
+			frameAtual = 0;
+
+		frameDetetive++;
+		if (frameDetetive == 3)
+			frameDetetive = 0;
+
+
+		
+		SDL_Delay(velAsssassino);
+	}
+
+	fechar();
 
 	return 0;
 }
