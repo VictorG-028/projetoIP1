@@ -153,7 +153,7 @@ SDL_Texture* loadTexture(const char* imagens, SDL_Renderer* gRenderer)
 	newTexture = SDL_CreateTextureFromSurface(gRenderer, loadedSurface);
 	if (newTexture == NULL)
 	{
-		printf("Unable to create texture from % s!SDL Error : % s\n", imagens, SDL_GetError() );
+		printf("Unable to create texture from % s!SDL Error : % s\n", imagens, SDL_GetError());
 	}
 
 	SDL_FreeSurface(loadedSurface);
@@ -177,12 +177,15 @@ int main(int argc, char* args[])
 	bool esq = false;
 	bool dir = false;
 	bool atirar = false;
-	
+
+	SDL_bool colIniBloq[quantBlocos];
+	SDL_bool colProjIni;
+
 	//contadores de frames
 	int frameAtual = 0;
 	int frameDetetive = 0;
 	int qtdFrame = 3;
-	
+
 
 	//randoniza a posição X do assassino
 	srand(time(NULL));
@@ -190,10 +193,10 @@ int main(int argc, char* args[])
 	//função booleana de execução do loop e criação da variavel atribuida a eventos
 	bool executando = true;
 	SDL_Event click;
-	
+
 
 	//--Area de criação de retangulos :D --//
-	
+
 	SDL_Rect detetiveRect;
 	detetiveRect.x = SCREEN_WIDTH / 2 - 25;
 	detetiveRect.y = SCREEN_HEIGHT - 50;
@@ -209,7 +212,7 @@ int main(int argc, char* args[])
 	assassinoRect.y = 0;
 	assassinoRect.w = 50;
 	assassinoRect.h = 50;
-	
+
 	float velMovAssassinoX = 8;
 	float velMovAssassinoY = 8;
 
@@ -250,14 +253,15 @@ int main(int argc, char* args[])
 	lifeAssassinoRect.h = 60;
 
 	SDL_Rect projetilRect;
+	SDL_Rect projetilRectCopia;
 	bool projetilVida = true;
 
 	float velProjetil = 20;
-	
+
 
 	//--fim da área de criação de retângulos--//
 
-	
+
 	init();
 
 	loadImage();
@@ -265,7 +269,7 @@ int main(int argc, char* args[])
 
 	//loop principal do jogo
 	while (executando)
-	{	
+	{
 
 		//eventos de comando do teclado/mouse
 		while (SDL_PollEvent(&click))
@@ -278,8 +282,8 @@ int main(int argc, char* args[])
 
 			switch (click.key.keysym.sym)
 			{
-				case SDLK_ESCAPE:
-					executando = false;
+			case SDLK_ESCAPE:
+				executando = false;
 			}
 
 			if (click.type == SDL_KEYDOWN)
@@ -300,12 +304,14 @@ int main(int argc, char* args[])
 						projetilRect.y = SCREEN_HEIGHT - 50;
 						projetilRect.w = 10;
 						projetilRect.h = 20;
+
+						projetilRectCopia = projetilRect;
 					}
-					
+
 					atirar = true;
 				}
 			}
-			else if(click.type == SDL_KEYUP)
+			else if (click.type == SDL_KEYUP)
 				if (click.key.keysym.sym == SDLK_a)
 				{
 					esq = false;
@@ -313,7 +319,7 @@ int main(int argc, char* args[])
 				else if (click.key.keysym.sym == SDLK_d)
 				{
 					dir = false;
-				}				
+				}
 		}
 
 		//---------------lógica----------------------//
@@ -324,11 +330,11 @@ int main(int argc, char* args[])
 		//movimento do detetive
 		if (esq == true)
 		{
-				detetiveRect.x -= 24;
+			detetiveRect.x -= 24;
 		}
 		else if (dir == true)
 		{
-				detetiveRect.x += 24;
+			detetiveRect.x += 24;
 		}
 
 		//colisão do detetive com a tela
@@ -346,7 +352,7 @@ int main(int argc, char* args[])
 		//movimento do inimigo
 		assassinoRect.x += velMovAssassinoX;
 		assassinoRect.y += velMovAssassinoY;
-	
+
 		//colisão do inimigo com a tela
 		if (assassinoRect.x < 0)
 		{
@@ -383,27 +389,25 @@ int main(int argc, char* args[])
 
 		//--PROJETIL--//
 
-		//posição do projetil
-		if (esq == true)
+		// posição do projetil
+		if (atirar == false)
 		{
-			projetilRect.x -= 24;
-		}
-		else if (dir == true)
-		{
-			projetilRect.x += 24;
+			projetilRect.x = detetiveRect.x;
 		}
 
 		//movimento do projetil
 
 		if (atirar == true)
 		{
-			if(projetilRect.y > 0)
+			if (projetilRect.y > 0)
 			{
 				projetilRect.y = projetilRect.y - velProjetil;
+				projetilRectCopia.y = projetilRect.y - velProjetil;
 			}
 			else if (projetilRect.y <= 0)
 			{
 				projetilRect.y = SCREEN_HEIGHT - 50;
+				projetilRectCopia.y = SCREEN_HEIGHT - 50;
 				projetilVida = false;
 				atirar = false;
 			}
@@ -421,7 +425,7 @@ int main(int argc, char* args[])
 			velMovAssassinoY = -velMovAssassinoY;
 
 			vidaDetetive--;
-			
+
 			if (vidaDetetive == 0)
 			{
 				executando = false;
@@ -430,10 +434,9 @@ int main(int argc, char* args[])
 
 		//colisão do inimigo com os obstaculos
 
-		SDL_bool colIniBloq[quantBlocos];
 		for (int i = 0; i < quantBlocos; i++)
 		{
-			colIniBloq[i] = true;
+			colIniBloq[i] = (SDL_bool) true;
 		}
 
 		for (int i = 0; i < quantBlocos; i++)
@@ -451,17 +454,20 @@ int main(int argc, char* args[])
 					velMovAssassinoY = -velMovAssassinoY * 1.1;
 
 					blocoViVo[i] = false;
-				}	
+				}
 			}
 		}
 
 		//colisão projetil com inimigo
 
-		SDL_bool colPorjIni = SDL_HasIntersection(&projetilRect, &assassinoRect);
+		colProjIni = SDL_HasIntersection(&projetilRect, &assassinoRect);
 
-		if (colPorjIni)
+		if (colProjIni)
 		{
 			projetilRect.y = SCREEN_HEIGHT - 50;
+
+			atirar = false;
+
 			vidaAssassino--;
 			if (vidaAssassino <= 0)
 			{
@@ -469,8 +475,8 @@ int main(int argc, char* args[])
 				executando = false;
 			}
 		}
-		
-		
+
+
 		//--------renderização---------//
 		//----------------------------//
 
@@ -480,20 +486,20 @@ int main(int argc, char* args[])
 		//renderiza a textura na tela
 		SDL_RenderCopy(gRenderer, gTexture, NULL, NULL);
 
-		SDL_RenderCopy(gRenderer, detetive1, NULL, &detetiveRect);
+		
 		if (esq)
 		{
 			switch (frameDetetive)
 			{
-				case 0:
-					SDL_RenderCopy(gRenderer, detetive2, NULL, &detetiveRect);
-					break;
-				case 1:
-					SDL_RenderCopy(gRenderer, detetive3, NULL, &detetiveRect);
-					break;
-				case 2:
-					SDL_RenderCopy(gRenderer, detetive4, NULL, &detetiveRect);
-					break;
+			case 0:
+				SDL_RenderCopy(gRenderer, detetive2, NULL, &detetiveRect);
+				break;
+			case 1:
+				SDL_RenderCopy(gRenderer, detetive3, NULL, &detetiveRect);
+				break;
+			case 2:
+				SDL_RenderCopy(gRenderer, detetive4, NULL, &detetiveRect);
+				break;
 			}
 		}
 		else if (dir)
@@ -511,18 +517,22 @@ int main(int argc, char* args[])
 				break;
 			}
 		}
-		
+		else
+		{
+			SDL_RenderCopy(gRenderer, detetive1, NULL, &detetiveRect);
+		}
+
 		switch (frameAtual)
 		{
-			case 0:
-				SDL_RenderCopy(gRenderer, assassino1, NULL, &assassinoRect);
-				break;
-			case 1:
-				SDL_RenderCopy(gRenderer, assassino2, NULL, &assassinoRect);
-				break;
-			case 2:
-				SDL_RenderCopy(gRenderer, assassino3, NULL, &assassinoRect);
-				break;
+		case 0:
+			SDL_RenderCopy(gRenderer, assassino1, NULL, &assassinoRect);
+			break;
+		case 1:
+			SDL_RenderCopy(gRenderer, assassino2, NULL, &assassinoRect);
+			break;
+		case 2:
+			SDL_RenderCopy(gRenderer, assassino3, NULL, &assassinoRect);
+			break;
 		}
 
 		for (int i = 0; i < quantBlocos; i++)
@@ -573,17 +583,16 @@ int main(int argc, char* args[])
 
 		if (atirar == true)
 		{
-			if (projetilVida == true)
+			if (projetilVida == true || 1)
 			{
 				SDL_RenderCopy(gRenderer, projetil, NULL, &projetilRect);
 			}
 		}
 		else if (atirar == false)
 		{
-			SDL_RenderClear(&projetil);
 			projetilVida == true;
 		}
-			
+
 
 		//atualiza a renderização
 		SDL_RenderPresent(gRenderer);
@@ -597,7 +606,7 @@ int main(int argc, char* args[])
 			frameDetetive = 0;
 
 
-		
+
 		SDL_Delay(velAsssassino);
 	}
 
